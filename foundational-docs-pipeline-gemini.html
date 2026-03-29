@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Foundational Docs Pipeline</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --surface: #13131a;
+    --surface2: #1a1a24;
+    --border: #2a2a38;
+    --accent: #c8ff00;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --success: #00e5a0;
+    --warning: #ffb800;
+    --error: #ff4d6a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(200,255,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(200,255,0,0.03) 1px, transparent 1px);
+    background-size: 40px 40px; pointer-events: none; z-index: 0;
+  }
+  .wrapper { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header { margin-bottom: 48px; border-bottom: 1px solid var(--border); padding-bottom: 32px; }
+  .logo { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 16px; opacity: 0.8; }
+  h1 { font-family: 'DM Serif Display', serif; font-size: 42px; line-height: 1.1; color: var(--text); margin-bottom: 12px; }
+  h1 em { color: var(--accent); font-style: italic; }
+  .subtitle { color: var(--muted); font-size: 15px; font-weight: 300; line-height: 1.6; }
+
+  .api-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin-bottom: 32px; }
+  .api-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .api-section label { font-size: 12px; font-family: 'DM Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; white-space: nowrap; margin-bottom: 0; }
+  .api-section input { flex: 1; min-width: 200px; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 13px; outline: none; transition: border-color 0.2s; }
+  .api-section input:focus { border-color: var(--accent); }
+  .model-badge { font-family: 'DM Mono', monospace; font-size: 11px; padding: 6px 12px; background: rgba(200,255,0,0.1); border: 1px solid rgba(200,255,0,0.2); color: var(--accent); border-radius: 20px; white-space: nowrap; }
+  .api-hint { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 10px; }
+  .api-hint a { color: var(--accent); text-decoration: none; }
+
+  .progress-bar { height: 2px; background: var(--border); border-radius: 1px; margin-bottom: 40px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 1px; transition: width 0.5s ease; width: 0%; }
+
+  .step { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; margin-bottom: 20px; overflow: hidden; transition: all 0.3s ease; }
+  .step.active { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(200,255,0,0.1), 0 8px 32px rgba(0,0,0,0.4); }
+  .step.done { border-color: var(--success); opacity: 0.85; }
+  .step.locked { opacity: 0.4; pointer-events: none; }
+
+  .step-header { display: flex; align-items: center; gap: 16px; padding: 20px 24px; }
+  .step-number { width: 36px; height: 36px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 13px; color: var(--muted); flex-shrink: 0; transition: all 0.3s; }
+  .step.active .step-number { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
+  .step.done .step-number { background: var(--success); border-color: var(--success); color: #000; }
+  .step-info { flex: 1; }
+  .step-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .step-desc { font-size: 13px; color: var(--muted); font-weight: 300; }
+  .step-badge { font-family: 'DM Mono', monospace; font-size: 10px; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .badge-auto { background: rgba(200,255,0,0.12); color: var(--accent); border: 1px solid rgba(200,255,0,0.2); }
+  .badge-manual { background: rgba(255,184,0,0.12); color: var(--warning); border: 1px solid rgba(255,184,0,0.2); }
+  .badge-done { background: rgba(0,229,160,0.12); color: var(--success); border: 1px solid rgba(0,229,160,0.2); }
+
+  .step-body { padding: 0 24px 24px; display: none; }
+  .step.active .step-body { display: block; }
+  .step.done .step-body { display: block; }
+
+  label { display: block; font-size: 12px; font-family: 'DM Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+  textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 14px 16px; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; resize: vertical; transition: border-color 0.2s; line-height: 1.6; min-height: 100px; }
+  textarea:focus { border-color: var(--accent); }
+
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { background: #d4ff26; transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+  .btn-success { background: var(--success); color: #000; }
+  .btn-success:hover { background: #00f5b0; }
+  .btn-row { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+
+  .output-box { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-top: 8px; font-size: 13px; line-height: 1.7; color: var(--text); white-space: pre-wrap; max-height: 420px; overflow-y: auto; font-family: 'DM Mono', monospace; display: none; }
+  .output-box.visible { display: block; }
+
+  .output-header { display: none; align-items: center; justify-content: space-between; margin-top: 16px; margin-bottom: 4px; }
+  .output-header.visible { display: flex; }
+  .output-label { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .copy-btn { font-family: 'DM Mono', monospace; font-size: 11px; padding: 6px 14px; background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .streaming { display: none; align-items: center; gap: 10px; margin-top: 16px; color: var(--accent); font-size: 13px; font-family: 'DM Mono', monospace; }
+  .streaming.visible { display: flex; }
+  .dot-pulse { display: flex; gap: 4px; }
+  .dot-pulse span { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: pulse 1.2s infinite; }
+  .dot-pulse span:nth-child(2) { animation-delay: 0.2s; }
+  .dot-pulse span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+
+  .callout { background: rgba(255,184,0,0.08); border: 1px solid rgba(255,184,0,0.25); border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; }
+  .callout-title { font-weight: 600; color: var(--warning); font-size: 14px; margin-bottom: 6px; }
+  .callout p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+  .callout a { color: var(--warning); }
+
+  .error-msg { color: var(--error); font-size: 13px; margin-top: 10px; font-family: 'DM Mono', monospace; display: none; background: rgba(255,77,106,0.08); border: 1px solid rgba(255,77,106,0.2); padding: 10px 14px; border-radius: 8px; }
+  .char-count { font-size: 11px; color: var(--muted); text-align: right; margin-top: 4px; font-family: 'DM Mono', monospace; }
+
+  .final-section { background: linear-gradient(135deg, rgba(200,255,0,0.05), rgba(0,229,160,0.05)); border: 1px solid rgba(200,255,0,0.2); border-radius: 16px; padding: 32px; text-align: center; margin-top: 32px; display: none; }
+  .final-section.visible { display: block; }
+  .final-section h2 { font-family: 'DM Serif Display', serif; font-size: 28px; margin-bottom: 12px; color: var(--accent); }
+  .final-section p { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <div class="logo">⬡ Foundational Docs System</div>
+    <h1>Tu pipeline de<br><em>documentos fundacionales</em></h1>
+    <p class="subtitle">Introduce tu producto → obtén los 4 documentos listos para construir tu tienda Shopify</p>
+  </header>
+
+  <div class="api-section">
+    <div class="api-row">
+      <label>Gemini API Key</label>
+      <input type="password" id="apiKey" placeholder="AIzaSy..." autocomplete="off" />
+      <span class="model-badge">gemini-2.5-pro</span>
+    </div>
+    <div class="api-hint">
+      Clave en <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> — nunca compartas tu key con nadie
+    </div>
+  </div>
+
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+  <!-- STEP 1 -->
+  <div class="step active" id="step1">
+    <div class="step-header">
+      <div class="step-number">1</div>
+      <div class="step-info">
+        <div class="step-title">Descripción del producto</div>
+        <div class="step-desc">Cuéntame qué vendes y a quién va dirigido</div>
+      </div>
+      <span class="step-badge badge-auto">Auto</span>
+    </div>
+    <div class="step-body">
+      <label>Producto y audiencia objetivo</label>
+      <textarea id="productInput" placeholder="Ej: Suplemento para pérdida de peso a base de ingredientes naturales, dirigido a mujeres de 35-55 años que han probado otras dietas sin éxito..."></textarea>
+      <div class="char-count" id="charCount">0 caracteres</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn1" onclick="step1Generate()">Generar prompt de Deep Research →</button>
+      </div>
+      <div class="streaming" id="stream1"><div class="dot-pulse"><span></span><span></span><span></span></div>Generando prompt optimizado...</div>
+      <div class="error-msg" id="err1"></div>
+      <div class="output-header" id="out1Header"><span class="output-label">Prompt para Gemini Deep Research</span><button class="copy-btn" onclick="copyOutput('out1')">Copiar</button></div>
+      <div class="output-box" id="out1"></div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="step locked" id="step2">
+    <div class="step-header">
+      <div class="step-number">2</div>
+      <div class="step-info">
+        <div class="step-title">Ejecutar Deep Research en Gemini</div>
+        <div class="step-desc">Copia el prompt, ejecútalo en Gemini Deep Research y pega el resultado aquí</div>
+      </div>
+      <span class="step-badge badge-manual">Manual</span>
+    </div>
+    <div class="step-body">
+      <div class="callout">
+        <div class="callout-title">⚠ Paso manual — 1 minuto</div>
+        <p>Ve a <a href="https://gemini.google.com" target="_blank"><strong>gemini.google.com</strong></a>, activa <strong>Deep Research</strong>, pega el prompt del paso anterior y espera el informe. Cuando lo tengas, cópialo todo y pégalo abajo.</p>
+      </div>
+      <label>Resultado completo del Deep Research</label>
+      <textarea id="researchInput" rows="10" placeholder="Pega aquí el informe completo de Gemini Deep Research..."></textarea>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="step2Continue()">Continuar → Generar Avatar Doc</button>
+      </div>
+      <div class="error-msg" id="err2"></div>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="step locked" id="step3">
+    <div class="step-header">
+      <div class="step-number">3</div>
+      <div class="step-info">
+        <div class="step-title">Avatar Sheet</div>
+        <div class="step-desc">Documento de avatares basado en el research</div>
+      </div>
+      <span class="step-badge badge-auto">Auto</span>
+    </div>
+    <div class="step-body">
+      <div class="streaming" id="stream3"><div class="dot-pulse"><span></span><span></span><span></span></div>Analizando research y construyendo avatares...</div>
+      <div class="error-msg" id="err3"></div>
+      <div class="output-header" id="out3Header"><span class="output-label">Avatar Sheet completo</span><button class="copy-btn" onclick="copyOutput('out3')">Copiar</button></div>
+      <div class="output-box" id="out3"></div>
+      <div class="btn-row" id="step3next" style="display:none">
+        <button class="btn btn-primary" onclick="step4Generate()">Continuar → Generar Offer Brief</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="step locked" id="step4">
+    <div class="step-header">
+      <div class="step-number">4</div>
+      <div class="step-info">
+        <div class="step-title">Offer Brief</div>
+        <div class="step-desc">Documento de oferta usando research + avatares</div>
+      </div>
+      <span class="step-badge badge-auto">Auto</span>
+    </div>
+    <div class="step-body">
+      <div class="streaming" id="stream4"><div class="dot-pulse"><span></span><span></span><span></span></div>Construyendo offer brief...</div>
+      <div class="error-msg" id="err4"></div>
+      <div class="output-header" id="out4Header"><span class="output-label">Offer Brief completo</span><button class="copy-btn" onclick="copyOutput('out4')">Copiar</button></div>
+      <div class="output-box" id="out4"></div>
+      <div class="btn-row" id="step4next" style="display:none">
+        <button class="btn btn-primary" onclick="step5Generate()">Continuar → Generar Necessary Beliefs</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5 -->
+  <div class="step locked" id="step5">
+    <div class="step-header">
+      <div class="step-number">5</div>
+      <div class="step-info">
+        <div class="step-title">Necessary Beliefs</div>
+        <div class="step-desc">Las 6 creencias clave que el cliente debe tener antes de comprar</div>
+      </div>
+      <span class="step-badge badge-auto">Auto</span>
+    </div>
+    <div class="step-body">
+      <div class="streaming" id="stream5"><div class="dot-pulse"><span></span><span></span><span></span></div>Identificando creencias necesarias...</div>
+      <div class="error-msg" id="err5"></div>
+      <div class="output-header" id="out5Header"><span class="output-label">Necessary Beliefs (máx. 6)</span><button class="copy-btn" onclick="copyOutput('out5')">Copiar</button></div>
+      <div class="output-box" id="out5"></div>
+    </div>
+  </div>
+
+  <div class="final-section" id="finalSection">
+    <h2>✓ Documentos listos</h2>
+    <p>Los 4 documentos fundacionales han sido generados con Gemini 2.5 Pro.</p>
+    <button class="btn btn-success" onclick="downloadAll()" style="font-size:16px;padding:16px 36px;">↓ Descargar los 4 documentos</button>
+  </div>
+
+</div>
+<script>
+// ── MODELO ────────────────────────────────────────────────────────────────────
+const MODEL = 'gemini-2.5-pro';
+
+// ── CONTEXTO EMBEBIDO ─────────────────────────────────────────────────────────
+const RESEARCH_METHODOLOGY = `METODOLOGÍA DE RESEARCH (Partes 1 y 2)
+
+POR QUÉ HACER RESEARCH:
+Necesitas entender tu mercado, cliente, productos competidores, soluciones existentes, qué le gusta y disgusta al mercado, puntos de dolor. El mercado puede decirte exactamente qué escribir, en su propio lenguaje.
+
+PREGUNTAS DE RESEARCH A RESPONDER:
+
+1. INSIGHTS DEMOGRÁFICOS:
+- Quién es tu cliente (edad, género, ingresos, ubicación)
+- Qué actitudes tienen (religiosas, políticas, sociales, económicas)
+- Cuáles son sus esperanzas y sueños
+- Cuáles son sus victorias y fracasos
+- Qué fuerzas externas creen que han impedido su mejor vida
+- Cuáles son sus prejuicios y estereotipos
+- Resume sus creencias fundamentales sobre vida, amor y familia en 1-3 frases
+
+2. SOLUCIONES EXISTENTES:
+- Qué está usando ya el mercado
+- Qué experiencia han tenido con esas soluciones
+- Qué le GUSTA al mercado de las soluciones existentes
+- Qué le DISGUSTA al mercado de las soluciones existentes
+- ¿Hay historias de horror sobre soluciones existentes?
+- ¿Cree el mercado que las soluciones existentes funcionan?
+
+3. CURIOSIDAD:
+- ¿Ha intentado alguien resolver esto de forma única antes? ¿Resultado?
+- ¿Hay intentos antiguos (pre-1960) únicos o descubrimientos olvidados?
+- Historias conspirativas sobre supresión de soluciones
+- Remedios o enfoques antiguos/olvidados
+
+4. CORRUPCIÓN ("Caída del Edén"):
+- ¿El problema solía no existir o no era tan grave?
+- ¿Ha sido exacerbado por fuerzas externas (Big Pharma, industria alimentaria, gobierno, etc.)?
+
+DÓNDE ENCONTRAR EL RESEARCH:
+1. Foros del nicho (ordenar por más respuestas = más resonancia emocional)
+2. Reseñas de Amazon (5 estrellas Y 1 estrella)
+3. Búsquedas de Google para historias de horror, soluciones antiguas, ángulos de corrupción
+4. Reddit — comunidades del nicho
+
+CLAVE: Busca las palabras exactas, frases, historias y disparadores emocionales que usa tu mercado. Copia y pega citas literales reales. Escribe copy al nivel de 7º grado.`;
+
+const AVATAR_TEMPLATE = `PLANTILLA AVATAR SHEET — Completar TODAS las secciones sin excepción:
+
+🔍 INFORMACIÓN DEMOGRÁFICA Y GENERAL:
+- Rango de edad:
+- Género:
+- Ubicación:
+- Situación económica/ingresos:
+- Ocupaciones típicas:
+- Identidades y estilos de vida típicos:
+
+🚩 DESAFÍOS Y PUNTOS DE DOLOR CLAVE:
+(3 puntos de dolor principales, cada uno con 3 sub-desafíos específicos)
+
+🌟 OBJETIVOS Y ASPIRACIONES:
+- Objetivos a corto plazo: (3)
+- Aspiraciones a largo plazo: (3)
+
+🧠 DRIVERS EMOCIONALES E INSIGHTS PSICOLÓGICOS: (3)
+
+💬 CITAS DIRECTAS DEL CLIENTE — lenguaje real del mercado: (3 citas entre comillas)
+
+🚩 CITAS SOBRE PUNTOS DE DOLOR Y FRUSTRACIONES: (3 citas entre comillas)
+
+🎯 CITAS DE MENTALIDAD: (3 citas entre comillas)
+
+🗣 CITAS SOBRE ESTADO EMOCIONAL Y MOTIVACIONES PERSONALES: (3 citas entre comillas)
+
+📢 CITAS SOBRE RESPUESTAS EMOCIONALES A LAS LUCHAS: (3 citas entre comillas)
+
+🚀 CITAS SOBRE MOTIVACIÓN Y URGENCIA: (3 citas entre comillas)
+
+🚩 MIEDOS EMOCIONALES CLAVE Y FRUSTRACIONES PROFUNDAS: (3)
+
+🧠 INSIGHTS EMOCIONALES Y PSICOGRÁFICOS: (3)
+
+📌 VIAJE EMOCIONAL TÍPICO:
+- Consciencia: [etapa inicial]
+- Frustración: [etapa de frustración]
+- Desesperación y Búsqueda de Soluciones: [etapa de búsqueda]
+- Alivio y Compromiso: [etapa de alivio y compromiso]`;
+
+const OFFER_BRIEF_TEMPLATE = `PLANTILLA OFFER BRIEF — Completar TODAS las secciones:
+
+IDEAS DE NOMBRE DE PRODUCTO: (3-5 opciones creativas)
+
+NIVEL DE CONSCIENCIA: Alto/Bajo
+
+NIVEL DE AWARENESS: (Sin awareness / Consciente del problema / Consciente de la solución / Consciente del producto / Máximo awareness)
+
+ETAPA DE SOFISTICACIÓN DEL MERCADO: (1-5, donde 1=mercado fresco, 5=saturado)
+
+BIG IDEA: (La idea central y compelling que impulsa toda la campaña)
+
+METÁFORA: (Una metáfora o analogía visceral y comprensible)
+
+UMP — MECANISMO ÚNICO DEL PROBLEMA:
+(La razón sorprendente y específica de POR QUÉ el prospecto tiene este problema — no causas genéricas)
+
+UMS — MECANISMO ÚNICO DE LA SOLUCIÓN:
+(La forma específica y propietaria en que tu producto resuelve el problema diferente a todo lo demás)
+
+HISTORIA DE DESCUBRIMIENTO / GURÚ: (Quién descubrió esto y cómo — origin story)
+
+PRODUCTO: (Descripción concisa de qué es)
+
+IDEAS DE HEADLINE/SUBHEADLINE: (3-5 opciones)
+
+OBJECIONES PRINCIPALES: (Lista completa de razones por las que NO comprarían)
+
+CADENA DE CREENCIAS: (Qué debe creer el prospecto para comprar, en secuencia lógica)
+
+ARQUITECTURA DEL FUNNEL: (VSL, advertorial, sales page larga, estructura de upsells)
+
+DOMINIOS POTENCIALES: (3-5 ideas)
+
+OTRAS NOTAS:`;
+
+const BELIEFS_FRAMEWORK = `PRINCIPIO FUNDAMENTAL — EL ARGUMENTO PRIMERO:
+
+El enfoque Agora: no se trata de palabras convincentes sino de la magnificencia del ARGUMENTO. Presentar un argumento que no puedas disputar, que lógica y emocionalmente lleva al prospecto a una sola conclusión.
+
+El marketing en su núcleo es simplemente cambiar las creencias existentes de un cliente hacia las creencias que lo empoderan para comprar.
+
+Cada campaña lleva al prospecto hacia una CREENCIA que debe tener ANTES de que se le presente la oferta. Esa creencia destino es la Estrella del Norte — todo lo que se dice y muestra los lleva un paso a la vez hacia ella.
+
+INSTRUCCIÓN: Las creencias necesarias deben ser MÁXIMO 6, estructurarse como "Yo creo que..." y ordenarse de más fundamental a más específica, formando una cadena lógica donde cada creencia prepara el terreno para la siguiente.`;
+
+// ── ESTADO ────────────────────────────────────────────────────────────────────
+const S = { product:'', researchPrompt:'', deepResearch:'', avatar:'', offerBrief:'', beliefs:'' };
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+const setProgress = p => document.getElementById('progressFill').style.width = p + '%';
+
+function unlockStep(id) {
+  const el = document.getElementById(id);
+  el.classList.remove('locked'); el.classList.add('active');
+  setTimeout(() => el.scrollIntoView({ behavior:'smooth', block:'start' }), 150);
+}
+
+function completeStep(id) {
+  const el = document.getElementById(id);
+  el.classList.remove('active'); el.classList.add('done');
+  const b = el.querySelector('.step-badge');
+  if (b) { b.className = 'step-badge badge-done'; b.textContent = '✓ Listo'; }
+}
+
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = '⚠ ' + msg; el.style.display = 'block';
+}
+
+function hideError(id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
+
+function copyOutput(id) {
+  navigator.clipboard.writeText(document.getElementById(id).textContent).then(() => {
+    document.querySelectorAll('.copy-btn').forEach(b => {
+      if (b.getAttribute('onclick')?.includes(id)) {
+        b.textContent = '✓ Copiado';
+        setTimeout(() => b.textContent = 'Copiar', 2000);
+      }
+    });
+  });
+}
+
+document.getElementById('productInput').addEventListener('input', function() {
+  document.getElementById('charCount').textContent = this.value.length + ' caracteres';
+});
+
+// ── GEMINI API (gemini-2.5-pro) ───────────────────────────────────────────────
+async function callGemini(promptText, outputId, streamId, errId) {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) { showError(errId, 'Introduce tu API key de Gemini primero'); return false; }
+
+  hideError(errId);
+  document.getElementById(streamId).classList.add('visible');
+  const outEl = document.getElementById(outputId);
+  const headerEl = document.getElementById(outputId + 'Header');
+  outEl.textContent = ''; outEl.classList.remove('visible');
+  if (headerEl) headerEl.classList.remove('visible');
+
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:streamGenerateContent?alt=sse&key=${apiKey}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: promptText }] }],
+        generationConfig: { maxOutputTokens: 8192, temperature: 0.7 }
+      })
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error?.message || `Error ${res.status} — verifica tu API key y que tengas billing activado`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '', fullText = '';
+    outEl.classList.add('visible');
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (!data || data === '[DONE]') continue;
+        try {
+          const parsed = JSON.parse(data);
+          const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) { fullText += text; outEl.textContent = fullText; outEl.scrollTop = outEl.scrollHeight; }
+        } catch {}
+      }
+    }
+
+    document.getElementById(streamId).classList.remove('visible');
+    if (headerEl) headerEl.classList.add('visible');
+    return fullText;
+
+  } catch (err) {
+    document.getElementById(streamId).classList.remove('visible');
+    showError(errId, err.message);
+    return false;
+  }
+}
+
+// ── STEPS ─────────────────────────────────────────────────────────────────────
+async function step1Generate() {
+  S.product = document.getElementById('productInput').value.trim();
+  if (!S.product) { showError('err1', 'Describe tu producto primero'); return; }
+  const btn = document.getElementById('btn1');
+  btn.disabled = true;
+
+  const prompt = `Eres un experto copywriter de respuesta directa especializado en ecommerce.
+
+Conoces esta metodología de research:
+${RESEARCH_METHODOLOGY}
+
+Tu tarea: genera un prompt DETALLADO y ESPECÍFICO para ejecutar en la herramienta Deep Research de Gemini.
+
+El prompt debe:
+- Cubrir los 4 ángulos: demografía, soluciones existentes, curiosidad y corrupción
+- Pedir investigación en foros, Amazon, Reddit y fuentes especializadas del nicho
+- Solicitar citas literales reales del mercado (la gente hablando sobre su problema en sus propias palabras)
+- Pedir un documento final estructurado de mínimo 6 páginas
+- Ser muy específico al producto/audiencia indicado
+
+PRODUCTO/AUDIENCIA: ${S.product}
+
+Escribe el prompt directamente en español, listo para copiar y pegar en Gemini Deep Research. Sin preámbulos ni explicaciones tuyas.`;
+
+  const result = await callGemini(prompt, 'out1', 'stream1', 'err1');
+  btn.disabled = false;
+  if (result) { S.researchPrompt = result; completeStep('step1'); unlockStep('step2'); setProgress(20); }
+}
+
+function step2Continue() {
+  const r = document.getElementById('researchInput').value.trim();
+  if (r.length < 200) { showError('err2', 'El research parece muy corto. Pega el informe completo de Gemini Deep Research.'); return; }
+  S.deepResearch = r;
+  completeStep('step2'); unlockStep('step3'); setProgress(40);
+  step3Generate();
+}
+
+async function step3Generate() {
+  const prompt = `Eres un experto copywriter de respuesta directa especializado en ecommerce.
+Completa el Avatar Sheet basándote EXCLUSIVAMENTE en el research proporcionado.
+Usa el lenguaje exacto del mercado. Sé específico y concreto, nunca genérico.
+Completa TODAS las secciones sin excepción. Cuando sea posible, usa citas y frases reales del mercado.
+
+PLANTILLA A COMPLETAR:
+${AVATAR_TEMPLATE}
+
+---
+PRODUCTO/AUDIENCIA: ${S.product}
+
+DEEP RESEARCH:
+${S.deepResearch}`;
+
+  const result = await callGemini(prompt, 'out3', 'stream3', 'err3');
+  if (result) { S.avatar = result; document.getElementById('step3next').style.display = 'flex'; setProgress(60); }
+}
+
+async function step4Generate() {
+  completeStep('step3'); unlockStep('step4');
+
+  const prompt = `Eres un experto copywriter y estratega de ecommerce direct response.
+Completa el Offer Brief con ideas específicas, originales y poderosas.
+El UMP y UMS deben surgir genuinamente del research, no ser genéricos.
+Completa TODAS las secciones. Sé específico, creativo y accionable.
+
+PLANTILLA A COMPLETAR:
+${OFFER_BRIEF_TEMPLATE}
+
+---
+PRODUCTO/AUDIENCIA: ${S.product}
+
+DEEP RESEARCH:
+${S.deepResearch}
+
+AVATAR SHEET:
+${S.avatar}`;
+
+  const result = await callGemini(prompt, 'out4', 'stream4', 'err4');
+  if (result) { S.offerBrief = result; document.getElementById('step4next').style.display = 'flex'; setProgress(80); }
+}
+
+async function step5Generate() {
+  completeStep('step4'); unlockStep('step5');
+
+  const prompt = `Eres un experto en copywriting de respuesta directa. Entiendes este principio:
+
+${BELIEFS_FRAMEWORK}
+
+PRODUCTO/AUDIENCIA: ${S.product}
+
+DEEP RESEARCH:
+${S.deepResearch}
+
+AVATAR SHEET:
+${S.avatar}
+
+OFFER BRIEF:
+${S.offerBrief}
+
+Escribe las creencias necesarias (MÁXIMO 6) que el prospecto debe tener antes de comprar.
+
+Para cada creencia incluye:
+1. La creencia como frase "Yo creo que..."
+2. Por qué es necesaria (1-2 frases)
+3. Cómo el research la respalda (evidencia específica del research)
+
+Ordénalas de más fundamental a más específica, formando una cadena lógica.`;
+
+  const result = await callGemini(prompt, 'out5', 'stream5', 'err5');
+  if (result) {
+    S.beliefs = result; completeStep('step5'); setProgress(100);
+    document.getElementById('finalSection').classList.add('visible');
+    setTimeout(() => document.getElementById('finalSection').scrollIntoView({ behavior:'smooth' }), 150);
+  }
+}
+
+// ── DESCARGA ──────────────────────────────────────────────────────────────────
+function downloadAll() {
+  const date = new Date().toLocaleDateString('es-ES');
+  const name = S.product.substring(0,50).replace(/[^a-zA-Z0-9\s]/g,'').trim().replace(/\s+/g,'_');
+  const sep = '═'.repeat(80), line = '─'.repeat(80);
+  const content = [
+    'DOCUMENTOS FUNDACIONALES', `Producto: ${S.product.substring(0,120)}`, `Generado: ${date} — Modelo: ${MODEL}`,
+    sep,'',line,'DOCUMENTO 1: PROMPT DE DEEP RESEARCH',line,'',S.researchPrompt,'','',
+    line,'DOCUMENTO 2: AVATAR SHEET',line,'',S.avatar,'','',
+    line,'DOCUMENTO 3: OFFER BRIEF',line,'',S.offerBrief,'','',
+    line,'DOCUMENTO 4: NECESSARY BELIEFS',line,'',S.beliefs,'',sep,'FIN'
+  ].join('\n');
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([content],{type:'text/plain;charset=utf-8'})), download: `Foundational_Docs_${name}_${date.replace(/\//g,'-')}.txt` });
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+</script>
+</body>
+</html>
